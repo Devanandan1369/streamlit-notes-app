@@ -1,46 +1,54 @@
 import streamlit as st
 import json
 import requests
-from datetime import datetime
 import os
+from datetime import datetime
 
-# Load secrets
-GITHUB_TOKEN = st.secrets["github"]["token"]
-GIST_ID = st.secrets["github"]["gist_id"]
-FILENAME = st.secrets["github"]["filename"]
-token = os.environ.get("GITHUB_TOKEN")
-
+# Load GitHub token and Gist ID from Streamlit secrets
+GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
+GIST_ID = os.environ.get("GIST_ID")
+GIST_FILENAME = "notes.json"
 
 # Headers for GitHub API
 HEADERS = {
-    "Authorization": f"token {GITHUB_TOKEN}",
-    "Accept": "application/vnd.github.v3+json"
+    "Authorization": f"Bearer {GITHUB_TOKEN}",
+    "Accept": "application/vnd.github+json"
 }
 
 # Load notes from GitHub Gist
 def load_notes():
+    if not GITHUB_TOKEN or not GIST_ID:
+        st.error("GitHub token or Gist ID not found.")
+        return []
     url = f"https://api.github.com/gists/{GIST_ID}"
-    res = requests.get(url, headers=HEADERS)
-    if res.status_code == 200:
-        files = res.json().get("files", {})
-        if FILENAME in files:
-            content = files[FILENAME].get("content", "[]")
+    response = requests.get(url, headers=HEADERS)
+    if response.status_code == 200:
+        try:
+            content = response.json()["files"][GIST_FILENAME]["content"]
             return json.loads(content)
-    return []
+        except Exception as e:
+            st.error("Failed to parse notes from Gist.")
+            return []
+    else:
+        st.error("Failed to load notes from GitHub Gist.")
+        return []
 
 # Save all notes to GitHub Gist
 def save_all_notes(notes):
+    if not GITHUB_TOKEN or not GIST_ID:
+        st.error("GitHub token or Gist ID not set.")
+        return
     url = f"https://api.github.com/gists/{GIST_ID}"
-    payload = {
+    data = {
         "files": {
-            FILENAME: {
+            GIST_FILENAME: {
                 "content": json.dumps(notes, indent=2)
             }
         }
     }
-    res = requests.patch(url, headers=HEADERS, data=json.dumps(payload))
-    if res.status_code not in [200, 201]:
-        st.error("Failed to save notes to GitHub Gist")
+    response = requests.patch(url, headers=HEADERS, json=data)
+    if response.status_code != 200:
+        st.error("Failed to save notes to GitHub Gist.")
 
 # Add a new note
 def add_note(title, text, category):
@@ -62,12 +70,18 @@ def delete_note(index):
         save_all_notes(notes)
 
 # ---- Streamlit UI ----
-st.title("📝 Notes App with Titles, Categories, Search & Delete")
+st.title("📝 Notes App with GitHub Gist Storage")
 
+# Note title input
 title = st.text_input("Note Title")
+
+# Note text input
 note_text = st.text_area("Write your note here:")
+
+# Category dropdown
 category = st.selectbox("Select a category", ["Personal", "Work", "Study", "Shopping", "Ideas", "Other"])
 
+# Save note
 if st.button("Save Note"):
     if title.strip() and note_text.strip():
         add_note(title.strip(), note_text.strip(), category)
@@ -75,8 +89,10 @@ if st.button("Save Note"):
     else:
         st.warning("Please fill in both the title and note.")
 
+# Search notes
 search_term = st.text_input("Search notes:")
 
+# Load and filter notes
 all_notes = load_notes()
 filtered_notes = [
     n for n in all_notes
@@ -85,6 +101,7 @@ filtered_notes = [
     or search_term.lower() in n.get("title", "").lower()
 ]
 
+# Display notes
 st.subheader("📋 Your Notes")
 
 if filtered_notes:
