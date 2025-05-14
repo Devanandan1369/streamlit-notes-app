@@ -2,11 +2,14 @@ import streamlit as st
 import json
 import requests
 from datetime import datetime
+import os
 
 # Load secrets
 GITHUB_TOKEN = st.secrets["github"]["token"]
 GIST_ID = st.secrets["github"]["gist_id"]
 FILENAME = st.secrets["github"]["filename"]
+token = os.environ.get("GITHUB_TOKEN")
+
 
 # Headers for GitHub API
 HEADERS = {
