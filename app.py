@@ -70,13 +70,13 @@ def delete_note(index):
         save_all_notes(notes)
 
 # ---- Streamlit UI ----
-st.title("📝 Notes App with GitHub Gist Storage")
+st.title("📝 Notes App with GitHub Gist")
 
 # Note title input
 title = st.text_input("Note Title")
 
 # Note text input
-note_text = st.text_area("Write your note here:")
+note_text = st.text_area("Write your note here!!!:")
 
 # Category dropdown
 category = st.selectbox("Select a category", ["Personal", "Work", "Study", "Shopping", "Ideas", "Other"])
